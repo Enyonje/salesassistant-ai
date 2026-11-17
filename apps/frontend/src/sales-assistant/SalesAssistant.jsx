@@ -224,8 +224,8 @@ export default function SalesAssistant() {
   const [campaignAnalytics, setCampaignAnalytics] = useState(null);
   const importInputRef = useRef(null);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError("");
     try {
       const [summaryResult, leadsResult, profileResult, followResult] = await Promise.all([
@@ -475,9 +475,11 @@ export default function SalesAssistant() {
     if (!window.confirm(`Send this ${outreachChannel} message now?`)) return;
     setOutreachSending(true); setError(""); setNotice("");
     try {
-      await request("/sales-assistant/outreach/send", { method: "POST", body: {
-        lead_id: outreachLeadId, channel: outreachChannel, subject: outreachSubject, message: outreachMessage,
-      } });
+      await request("/sales-assistant/outreach/send", {
+        method: "POST", body: {
+          lead_id: outreachLeadId, channel: outreachChannel, subject: outreachSubject, message: outreachMessage,
+        }
+      });
       setNotice(`${outreachChannel === "email" ? "Email" : "WhatsApp message"} accepted by the delivery provider.`);
       setOutreachMessage("");
       await Promise.all([loadOutreach(), loadAll()]);
