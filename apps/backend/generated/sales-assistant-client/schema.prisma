@@ -1,0 +1,177 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/sales-assistant-client"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("SALES_ASSISTANT_DATABASE_URL")
+  schemas  = ["sales_assistant"]
+}
+
+// Sales Assistant owns its own PostgreSQL schema and user accounts.
+// It shares the Supabase database server with SocialOps, not SocialOps tables.
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password_hash String
+  name          String?
+  org_id        String?
+  created_at    DateTime  @default(now())
+  deleted_at    DateTime?
+
+  @@index([org_id])
+  @@index([created_at])
+  @@map("users")
+  @@schema("sales_assistant")
+}
+
+model SalesProfile {
+  id                  String   @id @default(uuid())
+  tenant_id           String   @unique
+  owner_user_id       String
+  business_name       String?
+  website             String?
+  product_description String?  @db.Text
+  target_customer     String?  @db.Text
+  value_proposition   String?  @db.Text
+  tone                String   @default("professional")
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@map("sales_profiles")
+  @@schema("sales_assistant")
+}
+
+model SalesLead {
+  id                      String    @id @default(uuid())
+  tenant_id               String
+  owner_user_id           String
+  full_name               String
+  company                 String?
+  website                 String?
+  email                   String?
+  phone                   String?
+  source                  String    @default("manual")
+  stage                   String    @default("new")
+  score                   Int       @default(0)
+  estimated_value         Decimal?  @db.Decimal(12, 2)
+  notes                   String?   @db.Text
+  research_summary        String?   @db.Text
+  research_source_url     String?
+  researched_at           DateTime?
+  email_consent           Boolean   @default(false)
+  whatsapp_consent        Boolean   @default(false)
+  email_consent_source    String?
+  email_consent_at        DateTime?
+  whatsapp_consent_source String?
+  whatsapp_consent_at     DateTime?
+  email_opted_out_at      DateTime?
+  whatsapp_opted_out_at   DateTime?
+  last_contacted_at       DateTime?
+  next_follow_up_at       DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  @@index([tenant_id, stage])
+  @@index([tenant_id, updated_at])
+  @@index([tenant_id, next_follow_up_at])
+  @@index([tenant_id, researched_at])
+  @@map("sales_leads")
+  @@schema("sales_assistant")
+}
+
+model SalesActivity {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  owner_user_id String
+  lead_id       String?
+  activity_type String
+  summary       String   @db.Text
+  metadata      Json?
+  created_at    DateTime @default(now())
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, lead_id])
+  @@map("sales_activities")
+  @@schema("sales_assistant")
+}
+
+model SalesOutreachMessage {
+  id                  String    @id @default(uuid())
+  tenant_id           String
+  owner_user_id       String
+  lead_id             String
+  channel             String
+  destination         String
+  subject             String?
+  body                String    @db.Text
+  status              String    @default("queued")
+  provider_message_id String?
+  delivery_status     String    @default("pending")
+  delivered_at        DateTime?
+  read_at             DateTime?
+  error_message       String?   @db.Text
+  sent_at             DateTime?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, lead_id])
+  @@index([tenant_id, status])
+  @@map("sales_outreach_messages")
+  @@schema("sales_assistant")
+}
+
+model SalesCampaign {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  owner_user_id String
+  name          String
+  channel       String
+  status        String   @default("draft")
+  steps         Json
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([tenant_id, status])
+  @@index([tenant_id, created_at])
+  @@map("sales_campaigns")
+  @@schema("sales_assistant")
+}
+
+model SalesCampaignEnrollment {
+  id             String    @id @default(uuid())
+  tenant_id      String
+  campaign_id    String
+  lead_id        String
+  status         String    @default("active")
+  current_step   Int       @default(0)
+  next_send_at   DateTime?
+  last_sent_at   DateTime?
+  replied_at     DateTime?
+  stopped_reason String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  @@unique([campaign_id, lead_id])
+  @@index([tenant_id, status, next_send_at])
+  @@index([tenant_id, campaign_id])
+  @@map("sales_campaign_enrollments")
+  @@schema("sales_assistant")
+}
+
+model SalesWebhookEvent {
+  id         String   @id @default(uuid())
+  event_id   String   @unique
+  provider   String
+  event_type String
+  payload    Json
+  created_at DateTime @default(now())
+
+  @@index([provider, created_at])
+  @@index([event_type, created_at])
+  @@map("sales_webhook_events")
+  @@schema("sales_assistant")
+}
