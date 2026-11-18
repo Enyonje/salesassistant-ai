@@ -1,18 +1,218 @@
-import React,{useEffect,useState} from 'react';
-import{createRoot}from'react-dom/client';
-import{Activity,ArrowRight,BriefcaseBusiness,CheckCircle2,LockKeyhole,Mail,ShieldCheck,Sparkles,Zap}from'lucide-react';
-import SalesAssistant from'./sales-assistant/SalesAssistant.jsx';
+import React, { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  Activity, ArrowRight, BriefcaseBusiness, CheckCircle2,
+  LockKeyhole, Mail, ShieldCheck, Sparkles, Zap
+} from 'lucide-react';
+
+import SalesAssistant from './sales-assistant/SalesAssistant.jsx';
 import WorkforceCommandCenter from './workforce/WorkforceCommandCenter.jsx';
 import ProspectingCenter from './workforce/ProspectingCenter.jsx';
 import AdminConsole from './workforce/AdminConsole.jsx';
 import MarketingCenter from './workforce/MarketingCenter.jsx';
 import SEOCommandCenter from './workforce/SEOCommandCenter.jsx';
 import SocialCenter from './workforce/SocialCenter.jsx';
-import{apiFetch}from'./lib/api.js';
-import'./styles.css';
-function Auth(){const[mode,setMode]=useState('login');const[email,setEmail]=useState('');const[name,setName]=useState('');const[password,setPassword]=useState('');const[busy,setBusy]=useState(false);const[error,setError]=useState('');
- async function submit(e){e.preventDefault();setBusy(true);setError('');try{const data=await apiFetch(`/auth/${mode}`,{method:'POST',body:{email,name,password}});localStorage.setItem('salesAssistantAccessToken',data.token);localStorage.setItem('salesAssistantUser',JSON.stringify(data.user));window.dispatchEvent(new CustomEvent('sales-assistant:authenticated', { detail: data.token }))}catch(err){setError(err.message)}finally{setBusy(false)}}
- return <main className="min-h-screen grid lg:grid-cols-2 bg-[#07111f] text-white"><section className="hidden lg:flex flex-col justify-between p-14 border-r border-white/10 bg-[radial-gradient(ellipse_at_20%_10%,rgba(8,145,178,.2),transparent_45%),radial-gradient(ellipse_at_80%_90%,rgba(124,58,237,.16),transparent_45%)]"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-400 text-slate-950"><Zap/></div><div><div className="font-bold tracking-wide">SALES ASSISTANT AI</div><div className="text-xs text-slate-400">REVENUE COMMAND CENTER</div></div></div><div className="max-w-xl"><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs text-cyan-200"><Sparkles size={14}/> Your AI-powered sales operating system</div><h1 className="text-5xl font-semibold leading-tight tracking-tight">Turn every sales opportunity into <span className="text-cyan-300">measurable momentum.</span></h1><p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">Find prospects, understand buyers, move deals forward and create thoughtful outreach from one intelligent workspace.</p><div className="mt-10 grid grid-cols-2 gap-4">{[['Pipeline intelligence','Know what deserves attention'],['AI sales copilot','Create relevant conversations'],['Prospect research','Prepare before every approach'],['Campaign operations','Keep follow-through consistent']].map(([a,b])=><div key={a} className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><CheckCircle2 className="mb-3 text-cyan-300" size={19}/><div className="font-medium">{a}</div><div className="mt-1 text-xs text-slate-500">{b}</div></div>)}</div></div><div className="text-xs text-slate-600">Independent workspace · Your data stays in your Sales Assistant account</div></section><section className="flex items-center justify-center p-6"><div className="w-full max-w-md"><div className="mb-9 lg:hidden flex items-center gap-3"><Zap className="text-cyan-300"/><b>SALES ASSISTANT AI</b></div><div className="mb-8"><div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-300"><BriefcaseBusiness/></div><h2 className="text-3xl font-semibold">{mode==='login'?'Welcome back':'Build your sales workspace'}</h2><p className="mt-2 text-sm text-slate-400">{mode==='login'?'Sign in to continue where your team left off.':'Create your independent Sales Assistant account.'}</p></div><form onSubmit={submit} className="space-y-4">{mode==='register'&&<label className="block text-sm text-slate-300">Your name<input required value={name} onChange={e=>setName(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0d1a2b] px-4 py-3 outline-none focus:border-cyan-400" placeholder="Full name"/></label>}<label className="block text-sm text-slate-300">Email address<div className="mt-2 flex items-center rounded-xl border border-white/10 bg-[#0d1a2b] px-4"><Mail size={17} className="text-slate-500"/><input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-transparent px-3 py-3 outline-none" placeholder="you@company.com"/></div></label><label className="block text-sm text-slate-300">Password<div className="mt-2 flex items-center rounded-xl border border-white/10 bg-[#0d1a2b] px-4"><LockKeyhole size={17} className="text-slate-500"/><input required minLength={8} type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-transparent px-3 py-3 outline-none" placeholder="At least 8 characters"/></div></label>{error&&<div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-200">{error}</div>}<button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3.5 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60">{busy?'Please wait…':mode==='login'?'Sign in securely':'Create account'}<ArrowRight size={17}/></button></form><p className="mt-6 text-center text-sm text-slate-400">{mode==='login'?"New to Sales Assistant?":"Already have an account?"} <button onClick={()=>{setMode(mode==='login'?'register':'login');setError('')}} className="font-semibold text-cyan-300 hover:text-cyan-200">{mode==='login'?'Create account':'Sign in'}</button></p><div className="mt-10 flex items-center justify-center gap-2 text-xs text-slate-600"><ShieldCheck size={14}/> Independent authentication · Encrypted password storage</div></div></section></main>}
-function Root(){const[token,setToken]=useState(()=>localStorage.getItem('salesAssistantAccessToken'));useEffect(()=>{const sync=()=>setToken(localStorage.getItem('salesAssistantAccessToken'));const authenticated=(event)=>setToken(event.detail||localStorage.getItem('salesAssistantAccessToken'));const unauthorized=()=>setToken(null);window.addEventListener('storage',sync);window.addEventListener('sales-assistant:authenticated',authenticated);window.addEventListener('sales-assistant:unauthorized',unauthorized);return()=>{window.removeEventListener('storage',sync);window.removeEventListener('sales-assistant:authenticated',authenticated);window.removeEventListener('sales-assistant:unauthorized',unauthorized)}},[]);if(!token)return <Auth/>;return <Workspace onSignOut={()=>{localStorage.removeItem('salesAssistantAccessToken');localStorage.removeItem('salesAssistantUser');setToken(null)}}/>}
-function Workspace({onSignOut}){const[view,setView]=useState('workforce');const[isAdmin,setIsAdmin]=useState(()=>JSON.parse(localStorage.getItem('salesAssistantUser')||'{}').is_platform_admin===true);useEffect(()=>{apiFetch('/auth/me').then(data=>{const old=JSON.parse(localStorage.getItem('salesAssistantUser')||'{}');localStorage.setItem('salesAssistantUser',JSON.stringify({...old,...data.user}));setIsAdmin(data.user.is_platform_admin===true);}).catch(()=>{});},[]);return <div className="min-h-screen bg-[#07111f]"><header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#081322]/95 px-5 py-3 backdrop-blur"><div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400 text-slate-950"><Zap size={18}/></div><div><b className="text-sm tracking-wide text-white">SALES ASSISTANT AI</b><div className="text-[10px] uppercase tracking-widest text-slate-500">Autonomous sales & marketing workforce</div></div></div><nav className="flex items-center gap-2"><button onClick={()=>setView('workforce')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='workforce'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>Workforce command</button><button onClick={()=>setView('sales')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='sales'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>Sales workspace</button><button onClick={()=>setView('prospecting')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='prospecting'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>Prospect discovery</button><button onClick={()=>setView('marketing')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='marketing'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>Marketing</button><button onClick={()=>setView('seo')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='seo'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>SEO</button><button onClick={()=>setView('social')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='social'?'bg-cyan-400 text-slate-950':'text-slate-300 hover:bg-white/5'}`}>Social media</button>{isAdmin&&<button onClick={()=>setView('admin')} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view==='admin'?'bg-violet-400 text-slate-950':'text-violet-200 hover:bg-white/5'}`}>Admin panel</button>}<button onClick={onSignOut} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300">Sign out</button></nav></header>{view==='workforce'?<WorkforceCommandCenter/>:view==='sales'?<SalesAssistant/>:view==='prospecting'?<ProspectingCenter/>:view==='marketing'?<MarketingCenter/>:view==='seo'?<SEOCommandCenter/>:view==='social'?<SocialCenter/>:<AdminConsole/>}</div>}
-createRoot(document.getElementById('root')).render(<React.StrictMode><Root/></React.StrictMode>);
+import MarketingSite from './MarketingSite.jsx';
+import { apiFetch } from './lib/api.js';
+import './styles.css';
+
+function navigate(path) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  window.scrollTo(0, 0);
+}
+
+function Auth({ initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode);
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+
+    try {
+      const data = await apiFetch(`/auth/${mode}`, {
+        method: 'POST',
+        body: { email, name, password }
+      });
+
+      localStorage.setItem('salesAssistantAccessToken', data.token);
+      localStorage.setItem('salesAssistantUser', JSON.stringify(data.user));
+
+      window.dispatchEvent(new CustomEvent('sales-assistant:authenticated', {
+        detail: data.token
+      }));
+
+      navigate('/app');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-screen">
+      <section className="auth-brand-panel">
+        <a href="/" className="auth-brand"><Zap size={23} /> SALES ASSISTANT AI</a>
+        <div>
+          <span className="eyebrow">YOUR AUTONOMOUS AI WORKFORCE</span>
+          <h1>Build an intelligent team that helps your business grow.</h1>
+          <p>Coordinate sales, marketing, market intelligence and growth operations from one AI-powered workspace.</p>
+          <div className="auth-benefits">
+            {['Specialized AI employees', 'Connected business departments', 'Human-controlled execution'].map(x => (
+              <div key={x}><CheckCircle2 size={18} /> {x}</div>
+            ))}
+          </div>
+        </div>
+        <small>Independent Sales Assistant AI account and workspace.</small>
+      </section>
+
+      <section className="auth-form-panel">
+        <div className="auth-form">
+          <a href="/" className="auth-back">← Back to website</a>
+          <div className="auth-symbol"><BriefcaseBusiness size={24} /></div>
+          <span className="eyebrow">{mode === 'login' ? 'CUSTOMER ACCESS' : 'GET STARTED'}</span>
+          <h2>{mode === 'login' ? 'Welcome back.' : 'Build your AI workforce.'}</h2>
+          <p>{mode === 'login' ? 'Sign in to continue to your workspace.' : 'Create your Sales Assistant AI account.'}</p>
+
+          <form onSubmit={submit}>
+            {mode === 'register' && (
+              <label>Your name
+                <input required value={name} onChange={e => setName(e.target.value)} placeholder="Full name" />
+              </label>
+            )}
+
+            <label>Email address
+              <div className="auth-input-icon"><Mail size={17} /><input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" /></div>
+            </label>
+
+            <label>Password
+              <div className="auth-input-icon"><LockKeyhole size={17} /><input required minLength={8} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" /></div>
+            </label>
+
+            {error && <div className="auth-error">{error}</div>}
+
+            <button className="button button-primary auth-submit" disabled={busy}>
+              {busy ? 'Please wait…' : mode === 'login' ? 'Sign in securely' : 'Create account'}
+              <ArrowRight size={17} />
+            </button>
+          </form>
+
+          <p className="auth-switch">
+            {mode === 'login' ? 'New to Sales Assistant AI?' : 'Already have an account?'}
+            <button onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login');
+              setError('');
+              navigate(mode === 'login' ? '/signup' : '/login');
+            }}>{mode === 'login' ? 'Create account' : 'Sign in'}</button>
+          </p>
+
+          <div className="auth-security"><ShieldCheck size={15} /> Independent authentication · Secure password storage</div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function Workspace({ onSignOut }) {
+  const [view, setView] = useState('workforce');
+  const [isAdmin, setIsAdmin] = useState(() => JSON.parse(localStorage.getItem('salesAssistantUser') || '{}').is_platform_admin === true);
+
+  useEffect(() => {
+    apiFetch('/auth/me').then(data => {
+      const old = JSON.parse(localStorage.getItem('salesAssistantUser') || '{}');
+      localStorage.setItem('salesAssistantUser', JSON.stringify({ ...old, ...data.user }));
+      setIsAdmin(data.user.is_platform_admin === true);
+    }).catch(() => {});
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#07111f]">
+      <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#081322]/95 px-5 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400 text-slate-950"><Zap size={18} /></div>
+          <div><b className="text-sm tracking-wide text-white">SALES ASSISTANT AI</b><div className="text-[10px] uppercase tracking-widest text-slate-500">Autonomous sales & marketing workforce</div></div>
+        </div>
+        <nav className="flex flex-wrap items-center gap-2">
+          {[
+            ['workforce', 'Workforce command'],
+            ['sales', 'Sales workspace'],
+            ['prospecting', 'Prospect discovery'],
+            ['marketing', 'Marketing'],
+            ['seo', 'SEO'],
+            ['social', 'Social media'],
+            ...(isAdmin ? [['admin', 'Admin panel']] : [])
+          ].map(([id, label]) => (
+            <button key={id} onClick={() => setView(id)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === id ? 'bg-cyan-400 text-slate-950' : 'text-slate-300 hover:bg-white/5'}`}>{label}</button>
+          ))}
+          <button onClick={onSignOut} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300">Sign out</button>
+        </nav>
+      </header>
+
+      {view === 'workforce' ? <WorkforceCommandCenter /> :
+        view === 'sales' ? <SalesAssistant /> :
+        view === 'prospecting' ? <ProspectingCenter /> :
+        view === 'marketing' ? <MarketingCenter /> :
+        view === 'seo' ? <SEOCommandCenter /> :
+        view === 'social' ? <SocialCenter /> : <AdminConsole />}
+    </div>
+  );
+}
+
+function Root() {
+  const [token, setToken] = useState(() => localStorage.getItem('salesAssistantAccessToken'));
+  const [path, setPath] = useState(window.location.pathname.replace(/\/+$/, '') || '/');
+
+  useEffect(() => {
+    const syncPath = () => setPath(window.location.pathname.replace(/\/+$/, '') || '/');
+    const syncToken = () => setToken(localStorage.getItem('salesAssistantAccessToken'));
+    const authenticated = event => {
+      setToken(event.detail || localStorage.getItem('salesAssistantAccessToken'));
+      syncPath();
+    };
+    const unauthorized = () => setToken(null);
+
+    window.addEventListener('popstate', syncPath);
+    window.addEventListener('storage', syncToken);
+    window.addEventListener('sales-assistant:authenticated', authenticated);
+    window.addEventListener('sales-assistant:unauthorized', unauthorized);
+
+    return () => {
+      window.removeEventListener('popstate', syncPath);
+      window.removeEventListener('storage', syncToken);
+      window.removeEventListener('sales-assistant:authenticated', authenticated);
+      window.removeEventListener('sales-assistant:unauthorized', unauthorized);
+    };
+  }, []);
+
+  const signOut = () => {
+    localStorage.removeItem('salesAssistantAccessToken');
+    localStorage.removeItem('salesAssistantUser');
+    setToken(null);
+    navigate('/');
+  };
+
+  if (token && path !== '/login' && path !== '/signup') {
+    return <Workspace onSignOut={signOut} />;
+  }
+
+  if (path === '/login') return <Auth key="login" initialMode="login" />;
+  if (path === '/signup') return <Auth key="signup" initialMode="register" />;
+
+  if (token) return <Workspace onSignOut={signOut} />;
+
+  const publicPaths = ['/', '/features', '/how-it-works', '/pricing', '/demo'];
+  if (publicPaths.includes(path)) return <MarketingSite path={path} />;
+
+  return <MarketingSite path="/" />;
+}
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode><Root /></React.StrictMode>
+);
