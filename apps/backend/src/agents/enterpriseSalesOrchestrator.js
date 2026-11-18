@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { getOpenAIClient } from "../ai/openai.js";
+import { generateAIText } from "../ai/provider.js";
 
 /**
  * Autonomous Enterprise Sales Workflow Orchestrator
@@ -188,12 +188,11 @@ async function evaluateEnterpriseLead(lead, profile) {
         reasons.push("enriched account intelligence");
     }
 
-    const openai = getOpenAIClient();
-    if (openai && (lead.research_summary || lead.company)) {
-        const completion = await openai.chat.completions.create({
-            model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    if (lead.research_summary || lead.company) {
+        const completion = await generateAIText({
+            model: process.env.SALES_ASSISTANT_MODEL || undefined,
             temperature: 0.2,
-            response_format: { type: "json_object" },
+            json: true,
             messages: [
                 {
                     role: "system",
@@ -218,7 +217,7 @@ async function evaluateEnterpriseLead(lead, profile) {
             ],
         });
 
-        const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
+        const parsed = JSON.parse(completion.text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '') || "{}");
         const adj = Math.max(-20, Math.min(20, Number(parsed.score_adjustment || 0)));
         score = Math.max(0, Math.min(100, score + adj));
         if (parsed.rationale) reasons.push(parsed.rationale);
@@ -232,13 +231,12 @@ async function evaluateEnterpriseLead(lead, profile) {
 }
 
 async function synthesizeDealRecoveryAction(deal, profile) {
-    const openai = getOpenAIClient();
-    if (!openai) {
+    if (!(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY)) {
         return `Deal in '${deal.stage}' stage exceeded 5-day SLA. Schedule executive check-in and share ROI case study.`;
     }
 
-    const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    const completion = await generateAIText({
+        model: process.env.SALES_ASSISTANT_MODEL || undefined,
         temperature: 0.3,
         messages: [
             {
@@ -261,7 +259,7 @@ async function synthesizeDealRecoveryAction(deal, profile) {
     });
 
     return (
-        completion.choices[0]?.message?.content?.trim() ||
+        completion.text?.trim() ||
         "Trigger executive sponsor alignment and confirm procurement timeline."
     );
 }

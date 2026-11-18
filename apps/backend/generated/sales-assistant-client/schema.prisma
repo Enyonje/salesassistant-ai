@@ -175,3 +175,352 @@ model SalesWebhookEvent {
   @@map("sales_webhook_events")
   @@schema("sales_assistant")
 }
+
+model WorkforceDepartment {
+  id          String           @id @default(uuid())
+  tenant_id   String
+  name        String
+  code        String
+  description String           @db.Text
+  executive   String
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  agents      WorkforceAgent[]
+  tasks       WorkforceTask[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
+  @@map("workforce_departments")
+  @@schema("sales_assistant")
+}
+
+model WorkforceAgent {
+  id             String              @id @default(uuid())
+  tenant_id      String
+  department_id  String
+  name           String
+  role           String
+  level          String              @default("specialist")
+  description    String              @db.Text
+  capabilities   Json
+  kpis           Json
+  status         String              @default("idle")
+  autonomy_level String              @default("approval_required")
+  created_at     DateTime            @default(now())
+  updated_at     DateTime            @updatedAt
+  department     WorkforceDepartment @relation(fields: [department_id], references: [id], onDelete: Restrict)
+  tasks          WorkforceTask[]
+
+  @@index([tenant_id, department_id])
+  @@index([tenant_id, status])
+  @@map("workforce_agents")
+  @@schema("sales_assistant")
+}
+
+model WorkforceObjective {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  title          String
+  description    String   @db.Text
+  objective_type String   @default("revenue")
+  target_value   Float?
+  current_value  Float    @default(0)
+  currency       String   @default("USD")
+  period_start   DateTime
+  period_end     DateTime
+  status         String   @default("active")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@index([tenant_id, status])
+  @@map("workforce_objectives")
+  @@schema("sales_assistant")
+}
+
+model WorkforceTask {
+  id                String              @id @default(uuid())
+  tenant_id         String
+  department_id     String
+  agent_id          String?
+  parent_task_id    String?
+  title             String
+  description       String              @db.Text
+  task_type         String              @default("operational")
+  priority          String              @default("normal")
+  status            String              @default("queued")
+  input             Json?
+  output            Json?
+  requires_approval Boolean             @default(false)
+  approved_at       DateTime?
+  started_at        DateTime?
+  completed_at      DateTime?
+  error             String?             @db.Text
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+  department        WorkforceDepartment @relation(fields: [department_id], references: [id], onDelete: Restrict)
+  agent             WorkforceAgent?     @relation(fields: [agent_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, status, priority])
+  @@index([tenant_id, created_at])
+  @@index([agent_id, status])
+  @@map("workforce_tasks")
+  @@schema("sales_assistant")
+}
+
+model WorkforceEvent {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  agent_id   String?
+  task_id    String?
+  event_type String
+  message    String   @db.Text
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  @@index([tenant_id, created_at])
+  @@map("workforce_events")
+  @@schema("sales_assistant")
+}
+
+model ProspectingRun {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  created_by     String
+  query          String   @db.Text
+  industry       String
+  location       String?
+  keywords       String?
+  ideal_customer String?  @db.Text
+  provider       String
+  result_count   Int      @default(0)
+  status         String   @default("completed")
+  created_at     DateTime @default(now())
+
+  @@index([tenant_id, created_at])
+  @@map("prospecting_runs")
+  @@schema("sales_assistant")
+}
+
+model MarketProspect {
+  id                  String    @id @default(uuid())
+  tenant_id           String
+  run_id              String?
+  company_name        String
+  domain              String
+  website             String
+  description         String    @db.Text
+  source_provider     String
+  source_url          String
+  source_published_at DateTime?
+  fit_score           Int       @default(0)
+  status              String    @default("discovered")
+  contact_name        String?
+  contact_title       String?
+  contact_email       String?
+  converted_lead_id   String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  @@unique([tenant_id, domain])
+  @@index([tenant_id, status, fit_score])
+  @@index([tenant_id, created_at])
+  @@map("market_prospects")
+  @@schema("sales_assistant")
+}
+
+model ProspectContact {
+  id              String   @id @default(uuid())
+  tenant_id       String
+  prospect_id     String
+  full_name       String?
+  first_name      String?
+  last_name       String?
+  title           String?
+  email           String?
+  email_type      String?
+  confidence      Int?
+  verification    String   @default("unverified")
+  source_provider String
+  source_url      String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@unique([tenant_id, prospect_id, email])
+  @@index([tenant_id, prospect_id])
+  @@index([tenant_id, email])
+  @@map("prospect_contacts")
+  @@schema("sales_assistant")
+}
+
+model MarketingCampaign {
+  id         String           @id @default(uuid())
+  tenant_id  String
+  name       String
+  objective  String
+  channel    String
+  audience   String           @db.Text
+  status     String           @default("draft")
+  budget     Float?
+  currency   String           @default("USD")
+  start_at   DateTime?
+  end_at     DateTime?
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  assets     MarketingAsset[]
+
+  @@index([tenant_id, status, created_at])
+  @@map("marketing_campaigns")
+  @@schema("sales_assistant")
+}
+
+model MarketingAsset {
+  id             String             @id @default(uuid())
+  tenant_id      String
+  campaign_id    String?
+  asset_type     String             @default("social_post")
+  channel        String
+  title          String
+  body           String             @db.Text
+  call_to_action String?
+  status         String             @default("draft")
+  scheduled_at   DateTime?
+  published_at   DateTime?
+  external_id    String?
+  performance    Json?
+  created_at     DateTime           @default(now())
+  updated_at     DateTime           @updatedAt
+  campaign       MarketingCampaign? @relation(fields: [campaign_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id, status, scheduled_at])
+  @@index([tenant_id, campaign_id])
+  @@map("marketing_assets")
+  @@schema("sales_assistant")
+}
+
+model MarketingDelivery {
+  id            String    @id @default(uuid())
+  tenant_id     String
+  asset_id      String
+  lead_id       String
+  recipient     String
+  status        String    @default("queued")
+  provider      String    @default("smtp")
+  provider_id   String?
+  error_message String?   @db.Text
+  sent_at       DateTime?
+  created_at    DateTime  @default(now())
+
+  @@unique([tenant_id, asset_id, lead_id], map: "marketing_deliveries_tenant_asset_lead_key")
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, asset_id, status])
+  @@index([tenant_id, lead_id])
+  @@map("marketing_deliveries")
+  @@schema("sales_assistant")
+}
+
+model SeoProject {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  name           String
+  website        String
+  target_market  String?
+  target_country String?
+  language       String   @default("en")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@index([tenant_id, updated_at])
+  @@map("seo_projects")
+  @@schema("sales_assistant")
+}
+
+model SeoKeyword {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  project_id    String
+  keyword       String
+  search_intent String?
+  priority      String   @default("medium")
+  source        String   @default("manual")
+  notes         String?  @db.Text
+  created_at    DateTime @default(now())
+
+  @@unique([tenant_id, project_id, keyword], map: "seo_keywords_tenant_project_keyword_key")
+  @@index([tenant_id, project_id, priority], map: "seo_keywords_tenant_project_priority_idx")
+  @@map("seo_keywords")
+  @@schema("sales_assistant")
+}
+
+model SeoAudit {
+  id              String   @id @default(uuid())
+  tenant_id       String
+  project_id      String
+  page_url        String
+  score           Int
+  findings        Json
+  recommendations Json
+  created_at      DateTime @default(now())
+
+  @@index([tenant_id, project_id, created_at], map: "seo_audits_tenant_project_created_idx")
+  @@map("seo_audits")
+  @@schema("sales_assistant")
+}
+
+model SeoContentBrief {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  project_id String
+  keyword    String
+  title      String
+  brief      String   @db.Text
+  provider   String?
+  model      String?
+  created_at DateTime @default(now())
+
+  @@index([tenant_id, project_id, created_at], map: "seo_content_briefs_tenant_project_created_idx")
+  @@map("seo_content_briefs")
+  @@schema("sales_assistant")
+}
+
+model SocialConnection {
+  id                     String       @id @default(uuid())
+  tenant_id              String
+  platform               String
+  display_name           String
+  account_ref            String
+  access_token_encrypted String       @db.Text
+  status                 String       @default("connected")
+  created_at             DateTime     @default(now())
+  updated_at             DateTime     @updatedAt
+  posts                  SocialPost[]
+
+  @@unique([tenant_id, platform, account_ref], map: "social_connections_tenant_platform_account_key")
+  @@index([tenant_id, status], map: "social_connections_tenant_status_idx")
+  @@map("social_connections")
+  @@schema("sales_assistant")
+}
+
+model SocialPost {
+  id               String           @id @default(uuid())
+  tenant_id        String
+  connection_id    String
+  title            String           @default("")
+  body             String           @db.Text
+  media_url        String?
+  status           String           @default("draft")
+  scheduled_at     DateTime?
+  approved_at      DateTime?
+  published_at     DateTime?
+  external_post_id String?
+  external_url     String?
+  error_message    String?          @db.Text
+  attempts         Int              @default(0)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  connection       SocialConnection @relation(fields: [connection_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id, status, scheduled_at], map: "social_posts_tenant_status_scheduled_idx")
+  @@index([connection_id, created_at], map: "social_posts_connection_created_idx")
+  @@map("social_posts")
+  @@schema("sales_assistant")
+}

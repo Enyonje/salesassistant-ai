@@ -1,0 +1,83 @@
+name: Sales Assistant AI CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sales-assistant-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate and Build
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      SALES_ASSISTANT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sales_assistant?schema=sales_assistant
+      JWT_SECRET: ci-test-secret-not-for-production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            apps/frontend/package-lock.json
+
+      # BACKEND
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+
+      - name: Validate Prisma schema
+        working-directory: apps/backend
+        run: npx prisma validate --schema prisma/sales-assistant.prisma
+
+      - name: Generate Prisma client
+        working-directory: apps/backend
+        run: npx prisma generate --schema prisma/sales-assistant.prisma
+
+      - name: Run backend tests
+        working-directory: apps/backend
+        run: npm test --if-present
+
+      - name: Run backend lint
+        working-directory: apps/backend
+        run: npm run lint --if-present
+
+      # FRONTEND
+      - name: Install frontend dependencies
+        working-directory: apps/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: apps/frontend
+        run: npm test --if-present
+
+      - name: Build frontend
+        working-directory: apps/frontend
+        run: npm run build
+
+      - name: CI completed
+        run: echo "Sales Assistant AI validation completed successfully."

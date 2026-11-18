@@ -1,15 +1,11 @@
 import { prisma } from "../config/prisma.js";
-import { getOpenAIClient } from "../ai/openai.js";
+import { generateAIText } from "../ai/provider.js";
 import https from "node:https";
 
 /**
  * Automatically generates target leads and executes deep company research.
  */
 export async function runAutonomousLeadGeneration({ tenantId, actorUserId, industry, location, keywords, limit = 10, logger }) {
-    const openai = getOpenAIClient();
-    if (!openai) {
-        throw new Error("OpenAI API key required for autonomous lead generation.");
-    }
 
     // 1. AI-Driven Target Company & Lead Discovery Generation
     const prompt = `You are an elite B2B enterprise sales prospecting agent.
@@ -31,14 +27,14 @@ Return valid JSON with an array under the key "leads":
   }
 ]`;
 
-    const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    const completion = await generateAIText({
+        model: process.env.SALES_ASSISTANT_MODEL || undefined,
         temperature: 0.7,
-        response_format: { type: "json_object" },
+        json: true,
         messages: [{ role: "system", content: "Return strictly valid JSON." }, { role: "user", content: prompt }],
     });
 
-    const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
+    const parsed = JSON.parse(completion.text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '') || "{}");
     const rawLeads = Array.isArray(parsed.leads) ? parsed.leads : [];
 
     const createdLeads = [];
@@ -51,7 +47,7 @@ Return valid JSON with an array under the key "leads":
 
             if (raw.website) {
                 try {
-                    const res = await fetchCompanyWebsiteSummary(raw.website, openai);
+                    const res = await fetchCompanyWebsiteSummary(raw.website);
                     researchSummary = res.summary;
                 } catch {
                     researchSummary = `Company profile synthesized for ${raw.company} operating in ${industry}.`;
@@ -99,15 +95,14 @@ Return valid JSON with an array under the key "leads":
     return { success: true, generated_count: createdLeads.length, leads: createdLeads };
 }
 
-async function fetchCompanyWebsiteSummary(url, openai) {
-    // Simple heuristic or AI synthesis for company intel
-    const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+async function fetchCompanyWebsiteSummary(url) {
+    const completion = await generateAIText({
+        model: process.env.SALES_ASSISTANT_MODEL || undefined,
         temperature: 0.3,
         messages: [
-            { role: "system", content: "Provide a 2-sentence enterprise revenue intelligence summary based on company domain and market presence." },
-            { role: "user", content: `Analyze domain: ${url}` },
+            { role: "system", content: "Provide a 2-sentence enterprise revenue intelligence summary. Do not claim to have visited or verified a website unless its content is supplied." },
+            { role: "user", content: `Analyze this company domain cautiously: ${url}. State that domain-only details are unverified.` },
         ],
     });
-    return { summary: completion.choices[0]?.message?.content?.trim() || "Web presence analyzed." };
+    return { summary: completion.text.trim() || "Web presence analyzed; details not independently verified." };
 }

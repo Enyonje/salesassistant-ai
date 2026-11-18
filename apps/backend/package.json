@@ -1,30 +1,38 @@
 {
- "name": "sales-assistant-ai-api",
- "version": "1.0.0",
- "private": true,
- "type": "module",
- "scripts": {
-  "dev": "node --watch src/server.js",
-  "start": "node src/server.js",
-  "db:generate": "prisma generate",
-  "db:push": "prisma db push",
-  "db:studio": "prisma studio"
- },
- "dependencies": {
-  "@fastify/cors": "^9.0.1",
-  "@fastify/jwt": "^8.0.1",
-  "@fastify/rate-limit": "^9.1.0",
-  "@prisma/client": "^5.22.0",
-  "bcryptjs": "^2.4.3",
-  "dotenv": "^16.4.7",
-  "fastify": "^4.29.0",
-  "node-cron": "^4.6.0",
-  "nodemailer": "^6.9.16",
-  "openai": "^4.77.0",
-  "zod": "^3.24.1"
- },
- "devDependencies": {
-  "@types/node-cron": "^3.0.11",
-  "prisma": "^5.22.0"
- }
+  "name": "sales-assistant-ai-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:generate": "prisma generate --schema prisma/sales-assistant.prisma",
+    "db:push": "prisma db push --schema prisma/sales-assistant.prisma",
+    "db:studio": "prisma studio --schema prisma/sales-assistant.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema prisma/sales-assistant.prisma",
+    "check": "node --check src/server.js && node --check src/ai/provider.js && node --check src/routes/workforce.js && node --check src/routes/salesAssistant.js && node --check src/worker/workforceWorker.js && node --check src/agents/autonomousLeadEngine.js && node --check src/agents/enterpriseSalesOrchestrator.js && node --check src/routes/prospecting.js && node --check src/routes/contacts.js && node --check src/routes/admin.js && node --check src/routes/seo.js && node --check src/seo/audit.js && node --check src/security/adminMiddleware.js && node --check src/agents/marketDiscovery.js && node --check src/routes/marketing.js && node --check src/routes/publicMarketing.js && node --check src/routes/admin.js && node --check src/routes/social.js && node --check src/social/tokenVault.js && node --check src/social/publish.js && node --check src/worker/socialPublisher.js",
+    "verify:release": "cd ../.. && node scripts/verify-release.mjs",
+    "test:ai": "node --test test/ai-provider.test.js",
+    "admin:create": "node scripts/create-admin.mjs",
+    "test:marketing-email": "node --test test/marketing-email-safety.test.js",
+    "test:seo": "node --test test/seo-audit.test.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/jwt": "^8.0.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "fastify": "^4.29.0",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^6.9.16",
+    "openai": "^4.77.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node-cron": "^3.0.11",
+    "prisma": "^5.22.0"
+  }
 }

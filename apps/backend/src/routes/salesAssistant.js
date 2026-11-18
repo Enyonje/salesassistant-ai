@@ -6,7 +6,7 @@ import https from "node:https";
 import { z } from "zod";
 import { requireAuth } from "../security/authMiddleware.js";
 import { prisma } from "../config/prisma.js";
-import { getOpenAIClient } from "../ai/openai.js";
+import { generateAIText } from "../ai/provider.js";
 import { runAutonomousLeadGeneration } from "../agents/autonomousLeadEngine.js";
 import { runAutonomousEnterpriseCycle } from "../agents/enterpriseSalesOrchestrator.js";
 
@@ -629,13 +629,12 @@ export default async function salesAssistantRoutes(app) {
         extracted.text ? `Public website content: ${extracted.text.slice(0, 1800)}` : null,
       ].filter(Boolean).join("\n");
       let provider = "website-extraction";
-      const client = getOpenAIClient();
-      if (client && (extracted.text || extracted.description)) {
+      if ((extracted.text || extracted.description) && (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY)) {
         try {
-          const response = await client.chat.completions.create({
-            model: process.env.SALES_ASSISTANT_MODEL || "gpt-4o-mini",
+          const response = await generateAIText({
+            model: process.env.SALES_ASSISTANT_MODEL || undefined,
             temperature: 0.1,
-            max_tokens: 450,
+            maxTokens: 450,
             messages: [
               {
                 role: "system",
@@ -647,8 +646,8 @@ export default async function salesAssistantRoutes(app) {
               },
             ],
           });
-          const aiSummary = response.choices?.[0]?.message?.content?.trim();
-          if (aiSummary) { summary = aiSummary; provider = "openai+website"; }
+          const aiSummary = response.text?.trim();
+          if (aiSummary) { summary = aiSummary; provider = `${response.provider}+website`; }
         } catch (error) {
           request.log.warn({ err: error }, "Prospect enrichment AI summary failed; using extracted website facts.");
         }
@@ -942,15 +941,14 @@ export default async function salesAssistantRoutes(app) {
       return reply.code(409).send({ error: "Complete your business name and product description in Business profile before generating personalized messages." });
     }
 
-    const client = getOpenAIClient();
     let message;
     let provider = "built-in-template";
-    if (client) {
+    if (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY) {
       try {
-        const response = await client.chat.completions.create({
-          model: process.env.SALES_ASSISTANT_MODEL || "gpt-4o-mini",
+        const response = await generateAIText({
+          model: process.env.SALES_ASSISTANT_MODEL || undefined,
           temperature: 0.55,
-          max_tokens: 700,
+          maxTokens: 700,
           messages: [
             {
               role: "system",
@@ -972,8 +970,8 @@ export default async function salesAssistantRoutes(app) {
             },
           ],
         });
-        message = response.choices?.[0]?.message?.content?.trim();
-        provider = "openai";
+        message = response.text?.trim();
+        provider = response.provider;
       } catch (error) {
         request.log.warn({ err: error }, "Sales assistant AI generation failed; using safe template.");
       }

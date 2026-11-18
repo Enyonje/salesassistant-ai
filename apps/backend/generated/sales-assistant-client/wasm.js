@@ -244,6 +244,262 @@ exports.Prisma.SalesWebhookEventScalarFieldEnum = {
   created_at: 'created_at'
 };
 
+exports.Prisma.WorkforceDepartmentScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  executive: 'executive',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.WorkforceAgentScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  department_id: 'department_id',
+  name: 'name',
+  role: 'role',
+  level: 'level',
+  description: 'description',
+  capabilities: 'capabilities',
+  kpis: 'kpis',
+  status: 'status',
+  autonomy_level: 'autonomy_level',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.WorkforceObjectiveScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  title: 'title',
+  description: 'description',
+  objective_type: 'objective_type',
+  target_value: 'target_value',
+  current_value: 'current_value',
+  currency: 'currency',
+  period_start: 'period_start',
+  period_end: 'period_end',
+  status: 'status',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.WorkforceTaskScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  department_id: 'department_id',
+  agent_id: 'agent_id',
+  parent_task_id: 'parent_task_id',
+  title: 'title',
+  description: 'description',
+  task_type: 'task_type',
+  priority: 'priority',
+  status: 'status',
+  input: 'input',
+  output: 'output',
+  requires_approval: 'requires_approval',
+  approved_at: 'approved_at',
+  started_at: 'started_at',
+  completed_at: 'completed_at',
+  error: 'error',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.WorkforceEventScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  agent_id: 'agent_id',
+  task_id: 'task_id',
+  event_type: 'event_type',
+  message: 'message',
+  metadata: 'metadata',
+  created_at: 'created_at'
+};
+
+exports.Prisma.ProspectingRunScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  created_by: 'created_by',
+  query: 'query',
+  industry: 'industry',
+  location: 'location',
+  keywords: 'keywords',
+  ideal_customer: 'ideal_customer',
+  provider: 'provider',
+  result_count: 'result_count',
+  status: 'status',
+  created_at: 'created_at'
+};
+
+exports.Prisma.MarketProspectScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  run_id: 'run_id',
+  company_name: 'company_name',
+  domain: 'domain',
+  website: 'website',
+  description: 'description',
+  source_provider: 'source_provider',
+  source_url: 'source_url',
+  source_published_at: 'source_published_at',
+  fit_score: 'fit_score',
+  status: 'status',
+  contact_name: 'contact_name',
+  contact_title: 'contact_title',
+  contact_email: 'contact_email',
+  converted_lead_id: 'converted_lead_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.ProspectContactScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  prospect_id: 'prospect_id',
+  full_name: 'full_name',
+  first_name: 'first_name',
+  last_name: 'last_name',
+  title: 'title',
+  email: 'email',
+  email_type: 'email_type',
+  confidence: 'confidence',
+  verification: 'verification',
+  source_provider: 'source_provider',
+  source_url: 'source_url',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.MarketingCampaignScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  name: 'name',
+  objective: 'objective',
+  channel: 'channel',
+  audience: 'audience',
+  status: 'status',
+  budget: 'budget',
+  currency: 'currency',
+  start_at: 'start_at',
+  end_at: 'end_at',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.MarketingAssetScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  campaign_id: 'campaign_id',
+  asset_type: 'asset_type',
+  channel: 'channel',
+  title: 'title',
+  body: 'body',
+  call_to_action: 'call_to_action',
+  status: 'status',
+  scheduled_at: 'scheduled_at',
+  published_at: 'published_at',
+  external_id: 'external_id',
+  performance: 'performance',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.MarketingDeliveryScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  asset_id: 'asset_id',
+  lead_id: 'lead_id',
+  recipient: 'recipient',
+  status: 'status',
+  provider: 'provider',
+  provider_id: 'provider_id',
+  error_message: 'error_message',
+  sent_at: 'sent_at',
+  created_at: 'created_at'
+};
+
+exports.Prisma.SeoProjectScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  name: 'name',
+  website: 'website',
+  target_market: 'target_market',
+  target_country: 'target_country',
+  language: 'language',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SeoKeywordScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  project_id: 'project_id',
+  keyword: 'keyword',
+  search_intent: 'search_intent',
+  priority: 'priority',
+  source: 'source',
+  notes: 'notes',
+  created_at: 'created_at'
+};
+
+exports.Prisma.SeoAuditScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  project_id: 'project_id',
+  page_url: 'page_url',
+  score: 'score',
+  findings: 'findings',
+  recommendations: 'recommendations',
+  created_at: 'created_at'
+};
+
+exports.Prisma.SeoContentBriefScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  project_id: 'project_id',
+  keyword: 'keyword',
+  title: 'title',
+  brief: 'brief',
+  provider: 'provider',
+  model: 'model',
+  created_at: 'created_at'
+};
+
+exports.Prisma.SocialConnectionScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  platform: 'platform',
+  display_name: 'display_name',
+  account_ref: 'account_ref',
+  access_token_encrypted: 'access_token_encrypted',
+  status: 'status',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.SocialPostScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  connection_id: 'connection_id',
+  title: 'title',
+  body: 'body',
+  media_url: 'media_url',
+  status: 'status',
+  scheduled_at: 'scheduled_at',
+  approved_at: 'approved_at',
+  published_at: 'published_at',
+  external_post_id: 'external_post_id',
+  external_url: 'external_url',
+  error_message: 'error_message',
+  attempts: 'attempts',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -283,7 +539,24 @@ exports.Prisma.ModelName = {
   SalesOutreachMessage: 'SalesOutreachMessage',
   SalesCampaign: 'SalesCampaign',
   SalesCampaignEnrollment: 'SalesCampaignEnrollment',
-  SalesWebhookEvent: 'SalesWebhookEvent'
+  SalesWebhookEvent: 'SalesWebhookEvent',
+  WorkforceDepartment: 'WorkforceDepartment',
+  WorkforceAgent: 'WorkforceAgent',
+  WorkforceObjective: 'WorkforceObjective',
+  WorkforceTask: 'WorkforceTask',
+  WorkforceEvent: 'WorkforceEvent',
+  ProspectingRun: 'ProspectingRun',
+  MarketProspect: 'MarketProspect',
+  ProspectContact: 'ProspectContact',
+  MarketingCampaign: 'MarketingCampaign',
+  MarketingAsset: 'MarketingAsset',
+  MarketingDelivery: 'MarketingDelivery',
+  SeoProject: 'SeoProject',
+  SeoKeyword: 'SeoKeyword',
+  SeoAudit: 'SeoAudit',
+  SeoContentBrief: 'SeoContentBrief',
+  SocialConnection: 'SocialConnection',
+  SocialPost: 'SocialPost'
 };
 
 /**
