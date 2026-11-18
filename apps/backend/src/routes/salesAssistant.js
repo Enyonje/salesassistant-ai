@@ -7,6 +7,8 @@ import { z } from "zod";
 import { requireAuth } from "../security/authMiddleware.js";
 import { prisma } from "../config/prisma.js";
 import { getOpenAIClient } from "../ai/openai.js";
+import { runAutonomousLeadGeneration } from "../agents/autonomousLeadEngine.js";
+import { runAutonomousEnterpriseCycle } from "../agents/enterpriseSalesOrchestrator.js";
 
 const stages = ["new", "qualified", "contacted", "proposal", "won", "lost"];
 const leadInput = z.object({
@@ -396,6 +398,28 @@ export default async function salesAssistantRoutes(app) {
     };
   });
 
+  // Inside salesAssistantRoutes(app):
+  app.post("/autonomous/generate-leads", { preHandler: requireAuth }, async (request, reply) => {
+    const tenantId = request.user.org_id || request.user.id;
+    const { industry, location, keywords, limit } = request.body || {};
+
+    if (!industry) {
+      return reply.code(400).send({ success: false, error: "Industry parameter is required for autonomous generation." });
+    }
+
+    const result = await runAutonomousLeadGeneration({
+      tenantId,
+      actorUserId: request.user.id,
+      industry,
+      location,
+      keywords,
+      limit: Number(limit) || 10,
+      logger: request.log,
+    });
+
+    return result;
+  });
+
   app.get("/leads", async (request) => {
     const tenantId = tenantFor(request);
     const { stage, search } = request.query || {};
@@ -411,6 +435,55 @@ export default async function salesAssistantRoutes(app) {
     }
     const leads = await prisma.salesLead.findMany({ where, orderBy: { updated_at: "desc" }, take: 250 });
     return { success: true, leads: leads.map(serializeLead) };
+  });
+
+  // Inside salesAssistantRoutes(app):
+  app.post("/autonomous/run", { preHandler: requireAuth }, async (request) => {
+    const tenantId = request.user.org_id || request.user.id;
+    const report = await runAutonomousEnterpriseCycle({
+      tenantId,
+      actorUserId: request.user.id,
+      logger: request.log,
+    });
+    return { success: true, report };
+  });
+
+  app.get("/autonomous/telemetry", { preHandler: requireAuth }, async (request) => {
+    const tenantId = request.user.org_id || request.user.id;
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+
+    const [autonomousActions, qualifiedCount, activeEnrollments, pipelineSum] = await Promise.all([
+      prisma.salesActivity.findMany({
+        where: {
+          tenant_id: tenantId,
+          activity_type: { startsWith: "autonomous_" },
+          created_at: { gte: since },
+        },
+        orderBy: { created_at: "desc" },
+        take: 25,
+      }),
+      prisma.salesLead.count({
+        where: { tenant_id: tenantId, stage: { in: ["qualified", "contacted", "proposal", "won"] } },
+      }),
+      prisma.salesCampaignEnrollment.count({
+        where: { tenant_id: tenantId, status: "active" },
+      }),
+      prisma.salesLead.aggregate({
+        where: { tenant_id: tenantId, stage: { in: ["qualified", "contacted", "proposal"] } },
+        _sum: { estimated_value: true },
+      }),
+    ]);
+
+    return {
+      success: true,
+      metrics: {
+        autonomous_actions_30d: autonomousActions.length,
+        qualified_pipeline_count: qualifiedCount,
+        active_autonomous_enrollments: activeEnrollments,
+        open_pipeline_value: Number(pipelineSum._sum.estimated_value || 0),
+      },
+      recent_actions: autonomousActions,
+    };
   });
 
   app.post("/leads/import", {
@@ -434,9 +507,9 @@ export default async function salesAssistantRoutes(app) {
     const emails = [...new Set(rows.map((row) => row.email?.trim().toLowerCase()).filter(Boolean))];
     const existing = emails.length
       ? await prisma.salesLead.findMany({
-          where: { tenant_id: tenantId, email: { in: emails, mode: "insensitive" } },
-          select: { email: true },
-        })
+        where: { tenant_id: tenantId, email: { in: emails, mode: "insensitive" } },
+        select: { email: true },
+      })
       : [];
     const knownEmails = new Set(existing.map((row) => row.email?.toLowerCase()).filter(Boolean));
     const seenEmails = new Set();
@@ -947,22 +1020,26 @@ export default async function salesAssistantRoutes(app) {
     const counts = await prisma.salesCampaignEnrollment.groupBy({
       by: ["campaign_id", "status"], where: { tenant_id: tenantId }, _count: { _all: true },
     });
-    return { success: true, campaigns: campaigns.map((campaign) => ({
-      ...campaign,
-      enrollment_counts: counts.filter((item) => item.campaign_id === campaign.id)
-        .reduce((acc, item) => ({ ...acc, [item.status]: item._count._all }), {}),
-    })) };
+    return {
+      success: true, campaigns: campaigns.map((campaign) => ({
+        ...campaign,
+        enrollment_counts: counts.filter((item) => item.campaign_id === campaign.id)
+          .reduce((acc, item) => ({ ...acc, [item.status]: item._count._all }), {}),
+      }))
+    };
   });
 
   app.post("/campaigns", async (request, reply) => {
     const tenantId = tenantFor(request);
     const parsed = campaignInput.safeParse(request.body || {});
     if (!parsed.success) return reply.code(400).send({ error: "Provide a campaign name and valid sequence steps.", details: parsed.error.flatten() });
-    const campaign = await prisma.salesCampaign.create({ data: {
-      id: randomUUID(), tenant_id: tenantId, owner_user_id: request.user.id,
-      name: parsed.data.name, channel: parsed.data.channel, steps: parsed.data.steps,
-      status: "draft",
-    } });
+    const campaign = await prisma.salesCampaign.create({
+      data: {
+        id: randomUUID(), tenant_id: tenantId, owner_user_id: request.user.id,
+        name: parsed.data.name, channel: parsed.data.channel, steps: parsed.data.steps,
+        status: "draft",
+      }
+    });
     await recordActivity(tenantId, request.user.id, null, "campaign_created", `Created sales campaign: ${campaign.name}.`, { campaign_id: campaign.id, channel: campaign.channel, steps: parsed.data.steps.length });
     return reply.code(201).send({ success: true, campaign });
   });
@@ -1022,13 +1099,17 @@ export default async function salesAssistantRoutes(app) {
 
   app.patch("/campaigns/:id/enrollments/:enrollmentId/replied", async (request, reply) => {
     const tenantId = tenantFor(request);
-    const enrollment = await prisma.salesCampaignEnrollment.findFirst({ where: {
-      id: request.params.enrollmentId, campaign_id: request.params.id, tenant_id: tenantId,
-    } });
+    const enrollment = await prisma.salesCampaignEnrollment.findFirst({
+      where: {
+        id: request.params.enrollmentId, campaign_id: request.params.id, tenant_id: tenantId,
+      }
+    });
     if (!enrollment) return reply.code(404).send({ error: "Campaign enrollment not found." });
-    const updated = await prisma.salesCampaignEnrollment.update({ where: { id: enrollment.id }, data: {
-      status: "replied", replied_at: new Date(), next_send_at: null, stopped_reason: "Prospect response recorded by workspace user.",
-    } });
+    const updated = await prisma.salesCampaignEnrollment.update({
+      where: { id: enrollment.id }, data: {
+        status: "replied", replied_at: new Date(), next_send_at: null, stopped_reason: "Prospect response recorded by workspace user.",
+      }
+    });
     return { success: true, enrollment: updated };
   });
 
@@ -1047,9 +1128,11 @@ export default async function salesAssistantRoutes(app) {
       where: { tenant_id: tenantId, campaign_id: campaign.id, status: "processing", updated_at: { lt: staleClaimBefore } },
       data: { status: "active" },
     });
-    const due = await prisma.salesCampaignEnrollment.findMany({ where: {
-      tenant_id: tenantId, campaign_id: campaign.id, status: "active", next_send_at: { lte: new Date() },
-    }, orderBy: { next_send_at: "asc" }, take: 20 });
+    const due = await prisma.salesCampaignEnrollment.findMany({
+      where: {
+        tenant_id: tenantId, campaign_id: campaign.id, status: "active", next_send_at: { lte: new Date() },
+      }, orderBy: { next_send_at: "asc" }, take: 20
+    });
     const results = { processed: 0, sent: 0, stopped: 0, failed: 0, remaining_due: 0 };
     for (const enrollment of due) {
       const claim = await prisma.salesCampaignEnrollment.updateMany({
@@ -1063,9 +1146,11 @@ export default async function salesAssistantRoutes(app) {
       const optOutField = campaign.channel === "email" ? "email_opted_out_at" : "whatsapp_opted_out_at";
       const destination = campaign.channel === "email" ? lead?.email : lead?.phone;
       if (!lead || lead.stage === "won" || lead.stage === "lost" || !lead[consentField] || lead[optOutField] || !destination) {
-        await prisma.salesCampaignEnrollment.update({ where: { id: enrollment.id }, data: {
-          status: "stopped", next_send_at: null, stopped_reason: !lead ? "Lead no longer exists." : "Lead is closed, opted out, or no longer eligible.",
-        } });
+        await prisma.salesCampaignEnrollment.update({
+          where: { id: enrollment.id }, data: {
+            status: "stopped", next_send_at: null, stopped_reason: !lead ? "Lead no longer exists." : "Lead is closed, opted out, or no longer eligible.",
+          }
+        });
         results.stopped += 1; continue;
       }
       const step = steps[enrollment.current_step];
@@ -1073,11 +1158,13 @@ export default async function salesAssistantRoutes(app) {
         await prisma.salesCampaignEnrollment.update({ where: { id: enrollment.id }, data: { status: "completed", next_send_at: null } });
         results.stopped += 1; continue;
       }
-      const log = await prisma.salesOutreachMessage.create({ data: {
-        id: randomUUID(), tenant_id: tenantId, owner_user_id: request.user.id, lead_id: lead.id,
-        channel: campaign.channel, destination, subject: campaign.channel === "email" ? (step.subject || campaign.name) : null,
-        body: step.message, status: "queued",
-      } });
+      const log = await prisma.salesOutreachMessage.create({
+        data: {
+          id: randomUUID(), tenant_id: tenantId, owner_user_id: request.user.id, lead_id: lead.id,
+          channel: campaign.channel, destination, subject: campaign.channel === "email" ? (step.subject || campaign.name) : null,
+          body: step.message, status: "queued",
+        }
+      });
       try {
         let providerMessageId = null;
         if (campaign.channel === "email") {
@@ -1104,11 +1191,13 @@ export default async function salesAssistantRoutes(app) {
         await prisma.salesLead.update({ where: { id: lead.id }, data: { last_contacted_at: new Date(), stage: lead.stage === "new" ? "contacted" : lead.stage } });
         const nextStep = enrollment.current_step + 1;
         const next = steps[nextStep];
-        await prisma.salesCampaignEnrollment.update({ where: { id: enrollment.id }, data: {
-          current_step: nextStep, last_sent_at: new Date(), status: next ? "active" : "completed",
-          next_send_at: next ? new Date(Date.now() + Math.max(0, Number(next.delay_hours || 0) - Number(step.delay_hours || 0)) * 3600000) : null,
-          stopped_reason: null,
-        } });
+        await prisma.salesCampaignEnrollment.update({
+          where: { id: enrollment.id }, data: {
+            current_step: nextStep, last_sent_at: new Date(), status: next ? "active" : "completed",
+            next_send_at: next ? new Date(Date.now() + Math.max(0, Number(next.delay_hours || 0) - Number(step.delay_hours || 0)) * 3600000) : null,
+            stopped_reason: null,
+          }
+        });
         await recordActivity(tenantId, request.user.id, lead.id, "campaign_step_sent", `Sent step ${enrollment.current_step + 1} of ${steps.length} in ${campaign.name}.`, { campaign_id: campaign.id, message_id: log.id });
         results.sent += 1;
       } catch (error) {

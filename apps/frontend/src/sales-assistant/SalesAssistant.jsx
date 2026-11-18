@@ -372,6 +372,40 @@ export default function SalesAssistant() {
     }
   };
 
+  const [autoGenerating, setAutoGenerating] = useState(false);
+
+  const runAutoLeadDiscovery = async () => {
+    if (discoveryCriteria.industry.trim().length < 2) {
+      setError("Enter an industry or market before running autonomous discovery.");
+      return;
+    }
+    setAutoGenerating(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await request("/sales-assistant/autonomous/generate-leads", {
+        method: "POST",
+        body: {
+          industry: discoveryCriteria.industry,
+          location: discoveryCriteria.location,
+          keywords: [discoveryCriteria.keywords, discoveryCriteria.ideal_customer]
+            .filter(Boolean)
+            .join(", "),
+          limit: discoveryCriteria.limit,
+        },
+      });
+      setNotice(
+        `Autonomous discovery generated and researched ${result.generated_count ?? 0} leads into your pipeline.`
+      );
+      await loadAll(true);
+      setTab("leads");
+    } catch (err) {
+      setError(err.message || "Autonomous lead generation failed.");
+    } finally {
+      setAutoGenerating(false);
+    }
+  };
+
   const runDiscovery = async (event) => {
     event.preventDefault();
     setDiscoveryLoading(true);
@@ -386,6 +420,29 @@ export default function SalesAssistant() {
     } catch (err) {
       setError(err.message || "Could not discover prospects.");
     } finally { setDiscoveryLoading(false); }
+  };
+
+  const [runningCycle, setRunningCycle] = useState(false);
+
+  const triggerAutonomousCycle = async () => {
+    setRunningCycle(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await request("/sales-assistant/autonomous/run", {
+        method: "POST",
+      });
+      const report = result.report || {};
+      setNotice(
+        `Autonomous cycle complete: ${report.leads_scored ?? 0} leads scored, ` +
+        `${report.leads_qualified ?? 0} qualified, ${report.stalled_deals_flagged ?? 0} stalled deals flagged.`
+      );
+      await loadAll(true);
+    } catch (err) {
+      setError(err.message || "Failed to execute autonomous sales cycle.");
+    } finally {
+      setRunningCycle(false);
+    }
   };
 
   const importDiscoveries = async () => {
@@ -507,6 +564,38 @@ export default function SalesAssistant() {
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em] text-cyan-300">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-cyan-400/10"><Command size={15} /></span>
               Nexus Core / Revenue tools
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={triggerAutonomousCycle}
+                disabled={runningCycle || loading}
+                className="inline-flex items-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/15 px-4 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/25 disabled:opacity-50"
+              >
+                {runningCycle ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                {runningCycle ? "Running Agent…" : "Run Autonomous Cycle"}
+              </button>
+
+              <button
+                onClick={() => loadAll()}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3.5 py-2.5 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-50"
+              >
+                <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
+              </button>
+
+              <button
+                onClick={() => { setDraftLead(null); setTab("assistant"); }}
+                className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/15"
+              >
+                <Sparkles size={16} /> Draft with AI
+              </button>
+
+              <button
+                onClick={() => setShowLeadForm(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-cyan-300"
+              >
+                <Plus size={16} /> Add lead
+              </button>
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Sales Assistant</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">A practical AI workspace to organize prospects, prioritize opportunities and create better sales conversations.</p>
