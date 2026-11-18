@@ -23,7 +23,7 @@ const app = Fastify({ logger: true, bodyLimit: 2 * 1024 * 1024 });
 const required = ['SALES_ASSISTANT_DATABASE_URL', 'JWT_SECRET'];
 for (const key of required) { if (!process.env[key]) { app.log.error(`${key} must be configured`); process.exit(1) } }
 if (process.env.JWT_SECRET.length < 32) { app.log.error('JWT_SECRET must contain at least 32 characters'); process.exit(1) }
-await app.register(cors, { origin: (origin, cb) => { const allowed = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(x => x.trim()); if (!origin || allowed.includes('*') || allowed.includes(origin)) cb(null, true); else cb(new Error('Origin is not allowed by CORS'), false) }, credentials: true });
+await app.register(cors, { origin: (origin, cb) => { const allowed = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,https://salesassistant.nexusthecore.com').split(',').map(x => x.trim()); if (!origin || allowed.includes('*') || allowed.includes(origin)) cb(null, true); else cb(new Error('Origin is not allowed by CORS'), false) }, credentials: true });
 await app.register(jwt, { secret: process.env.JWT_SECRET });
 await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
 app.get('/health', async (request, reply) => { try { await prisma.$queryRaw`SELECT 1`; return { ok: true, service: 'sales-assistant-ai', database: 'connected' }; } catch (error) { request.log.error(error); return reply.code(503).send({ ok: false, service: 'sales-assistant-ai', database: 'unavailable' }); } });
