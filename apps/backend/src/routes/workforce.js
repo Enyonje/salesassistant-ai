@@ -726,7 +726,7 @@ export default async function workforceRoutes(app) {
           ? 'queued'
           : 'rejected',
 
-        requires_approval: parsed.data.decision === 'approve',
+        requires_approval: parsed.data.decision === 'approve' ? false : task.requires_approval,
 
         approved_at: parsed.data.decision === 'approve'
           ? new Date()

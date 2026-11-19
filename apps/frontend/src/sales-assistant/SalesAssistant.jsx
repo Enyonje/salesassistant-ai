@@ -21,6 +21,16 @@ const emptyLead = {
   stage: "new", estimated_value: "", notes: "", next_follow_up_at: "",
 };
 
+
+function countWords(value) {
+  return String(value || "").trim().split(/\\s+/).filter(Boolean).length;
+}
+
+function limitWords(value, maxWords) {
+  const words = String(value || "").trim().split(/\\s+/).filter(Boolean);
+  return words.length > maxWords ? words.slice(0, maxWords).join(" ") : value;
+}
+
 const emptyProfile = {
   business_name: "", website: "", product_description: "",
   target_customer: "", value_proposition: "", tone: "professional",
@@ -74,38 +84,44 @@ function MetricCard({ icon: Icon, label, value, detail, accent = "cyan" }) {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text", required = false, ...props }) {
+function Field({ label, value, onChange, placeholder, type = "text", required = false, maxWords, ...props }) {
+  const words = countWords(value);
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}{required ? " *" : ""}</span>
       <input
         type={type}
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(maxWords ? limitWords(event.target.value, maxWords) : event.target.value)}
         placeholder={placeholder}
         required={required}
         {...props}
         className="w-full rounded-xl border border-white/10 bg-[#081222] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/10"
       />
+      {maxWords && <span className="mt-1 block text-right text-[11px] text-slate-500">{words} / {maxWords} words</span>}
     </label>
   );
 }
-
-function TextAreaField({ label, value, onChange, placeholder, rows = 3 }) {
+function TextAreaField({ label, value, onChange, placeholder, rows = 3, maxWords }) {
+  const words = countWords(value);
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}</span>
       <textarea
         rows={rows}
         value={value ?? ""}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange(maxWords ? limitWords(event.target.value, maxWords) : event.target.value)}
         placeholder={placeholder}
         className="w-full resize-y rounded-xl border border-white/10 bg-[#081222] px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/10"
       />
+      {maxWords && (
+        <span className={`mt-1 block text-right text-[11px] ${words >= maxWords ? "text-amber-300" : "text-slate-500"}`}>
+          {words} / {maxWords} words · {Math.max(0, maxWords - words)} remaining
+        </span>
+      )}
     </label>
   );
 }
-
 function Modal({ title, onClose, children, wide = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -321,6 +337,21 @@ export default function SalesAssistant() {
 
   const saveProfile = async (event) => {
     event.preventDefault();
+
+    const limits = {
+      business_name: 30,
+      product_description: 500,
+      target_customer: 300,
+      value_proposition: 200,
+    };
+
+    for (const [field, maximum] of Object.entries(limits)) {
+      if (countWords(profile[field]) > maximum) {
+        setError(`${field.replace(/_/g, " ")} cannot exceed ${maximum} words.`);
+        return;
+      }
+    }
+
     setSaving(true);
     setError("");
     try {
@@ -835,10 +866,10 @@ export default function SalesAssistant() {
               <div className="mx-auto max-w-3xl rounded-2xl border border-white/[0.07] bg-[#0d1728] p-5 sm:p-7">
                 <div className="mb-6"><div className="mb-2 flex items-center gap-2 text-cyan-200"><Building2 size={18} /><span className="text-xs font-semibold uppercase tracking-wider">AI knowledge base</span></div><h2 className="text-xl font-semibold text-white">Business profile</h2><p className="mt-1 text-sm text-slate-400">Give your sales copilot accurate context about what you sell and who you serve. These details are used to personalize generated messages.</p></div>
                 <form onSubmit={saveProfile} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2"><Field label="Business name" required value={profile.business_name} onChange={(v) => setProfile((p) => ({ ...p, business_name: v }))} placeholder="e.g. Acme Technologies" /><Field label="Website" value={profile.website} onChange={(v) => setProfile((p) => ({ ...p, website: v }))} placeholder="https://example.com" /></div>
-                  <TextAreaField label="What do you sell?" value={profile.product_description} onChange={(v) => setProfile((p) => ({ ...p, product_description: v }))} placeholder="Describe your product or service, the problem it solves and its key capabilities." rows={4} />
-                  <TextAreaField label="Who is your ideal customer?" value={profile.target_customer} onChange={(v) => setProfile((p) => ({ ...p, target_customer: v }))} placeholder="Describe the industries, company sizes, roles or customer types you serve." />
-                  <TextAreaField label="Your value proposition" value={profile.value_proposition} onChange={(v) => setProfile((p) => ({ ...p, value_proposition: v }))} placeholder="Why should customers choose you? Include verified differentiators." />
+                  <div className="grid gap-4 sm:grid-cols-2"><Field label="Business name" required value={profile.business_name} onChange={(v) => setProfile((p) => ({ ...p, business_name: v }))} placeholder="e.g. Acme Technologies" maxWords={30} /><Field label="Website" value={profile.website} onChange={(v) => setProfile((p) => ({ ...p, website: v }))} placeholder="https://example.com" /></div>
+                  <TextAreaField label="What do you sell?" value={profile.product_description} onChange={(v) => setProfile((p) => ({ ...p, product_description: v }))} placeholder="Describe your product or service, the problem it solves and its key capabilities." rows={4} maxWords={500} />
+                  <TextAreaField label="Who is your ideal customer?" value={profile.target_customer} onChange={(v) => setProfile((p) => ({ ...p, target_customer: v }))} placeholder="Describe the industries, company sizes, roles or customer types you serve." maxWords={300} />
+                  <TextAreaField label="Your value proposition" value={profile.value_proposition} onChange={(v) => setProfile((p) => ({ ...p, value_proposition: v }))} placeholder="Why should customers choose you? Include verified differentiators." maxWords={200} />
                   <label className="block max-w-xs"><span className="mb-1.5 block text-xs font-medium text-slate-400">Writing tone</span><select value={profile.tone} onChange={(e) => setProfile((p) => ({ ...p, tone: e.target.value }))} className="w-full rounded-xl border border-white/10 bg-[#081222] px-3.5 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60"><option value="professional">Professional</option><option value="friendly">Friendly</option><option value="confident">Confident</option><option value="consultative">Consultative</option></select></label>
                   <div className="border-t border-white/[0.07] pt-5"><button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-cyan-300 disabled:opacity-60">{saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save business profile</button></div>
                 </form>
