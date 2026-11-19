@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../config/prisma.js';
 import { requireAuth } from '../security/authMiddleware.js';
 import { getAIProviderStatus } from '../ai/provider.js';
+import { assertAgentEntitlement } from '../billing/service.js';
 
 const departments = [
   ['EXEC', 'Executive Office', 'Coordinates company strategy, priorities, governance and cross-department performance.', 'AI CEO'],
@@ -507,6 +508,7 @@ export default async function workforceRoutes(app) {
           error: 'The selected employee does not belong to this department.',
         });
       }
+      await assertAgentEntitlement(tenant_id, agent.id);
     }
 
     if (!parsed.data.agent_id && !parsed.data.requires_approval) {
@@ -598,6 +600,8 @@ export default async function workforceRoutes(app) {
       });
     }
 
+    await assertAgentEntitlement(req.user.id, task.agent_id);
+
     const updated = await prisma.workforceTask.update({
       where: {
         id: task.id,
@@ -649,6 +653,8 @@ export default async function workforceRoutes(app) {
         error: 'Only tasks awaiting approval can be approved for execution.',
       });
     }
+
+    if (task.agent_id) await assertAgentEntitlement(req.user.id, task.agent_id);
 
     const updated = await prisma.workforceTask.update({
       where: {
@@ -716,6 +722,8 @@ export default async function workforceRoutes(app) {
         error: 'Only tasks awaiting approval can be approved or rejected.',
       });
     }
+
+    if (parsed.data.decision === 'approve' && task.agent_id) await assertAgentEntitlement(tenant_id, task.agent_id);
 
     const updated = await prisma.workforceTask.update({
       where: {

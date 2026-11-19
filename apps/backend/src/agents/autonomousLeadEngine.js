@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma.js";
 import { generateAIText } from "../ai/provider.js";
+import { consumeUsage } from "../billing/service.js";
 import https from "node:https";
 
 /**
@@ -55,6 +56,7 @@ Return valid JSON with an array under the key "leads":
             }
 
             // 3. Save Lead & Research to PostgreSQL database
+            await consumeUsage({ tenantId, metric: 'leads_created', sourceKey: `autonomous-lead:${randomUUID()}`, metadata: { source: 'autonomous_discovery_agent' } });
             const lead = await prisma.salesLead.create({
                 data: {
                     tenant_id: tenantId,

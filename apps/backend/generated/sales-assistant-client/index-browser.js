@@ -500,6 +500,37 @@ exports.Prisma.SocialPostScalarFieldEnum = {
   updated_at: 'updated_at'
 };
 
+exports.Prisma.SubscriptionScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  user_id: 'user_id',
+  plan_key: 'plan_key',
+  status: 'status',
+  trial_start: 'trial_start',
+  trial_end: 'trial_end',
+  current_period_start: 'current_period_start',
+  current_period_end: 'current_period_end',
+  cancel_at_period_end: 'cancel_at_period_end',
+  canceled_at: 'canceled_at',
+  stripe_customer_id: 'stripe_customer_id',
+  stripe_subscription_id: 'stripe_subscription_id',
+  stripe_price_id: 'stripe_price_id',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+};
+
+exports.Prisma.UsageRecordScalarFieldEnum = {
+  id: 'id',
+  tenant_id: 'tenant_id',
+  metric: 'metric',
+  quantity: 'quantity',
+  period_start: 'period_start',
+  period_end: 'period_end',
+  source_key: 'source_key',
+  metadata: 'metadata',
+  created_at: 'created_at'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -556,7 +587,9 @@ exports.Prisma.ModelName = {
   SeoAudit: 'SeoAudit',
   SeoContentBrief: 'SeoContentBrief',
   SocialConnection: 'SocialConnection',
-  SocialPost: 'SocialPost'
+  SocialPost: 'SocialPost',
+  Subscription: 'Subscription',
+  UsageRecord: 'UsageRecord'
 };
 
 /**

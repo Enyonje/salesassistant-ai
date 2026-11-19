@@ -9,6 +9,7 @@ import { prisma } from "../config/prisma.js";
 import { generateAIText } from "../ai/provider.js";
 import { runAutonomousLeadGeneration } from "../agents/autonomousLeadEngine.js";
 import { runAutonomousEnterpriseCycle } from "../agents/enterpriseSalesOrchestrator.js";
+import { consumeUsage } from '../billing/service.js';
 
 const stages = ["new", "qualified", "contacted", "proposal", "won", "lost"];
 const leadInput = z.object({
@@ -527,6 +528,7 @@ export default async function salesAssistantRoutes(app) {
     }
 
     if (accepted.length) {
+      await consumeUsage({ tenantId, metric: 'leads_created', quantity: accepted.length, sourceKey: `lead-import:${randomUUID()}`, metadata: { source: 'csv_import' } });
       await prisma.salesLead.createMany({
         data: accepted.map((row) => ({
           id: randomUUID(),
@@ -559,6 +561,7 @@ export default async function salesAssistantRoutes(app) {
     const parsed = leadInput.safeParse(request.body || {});
     if (!parsed.success) return reply.code(400).send({ error: "Please check the lead details.", details: parsed.error.flatten() });
     const data = parsed.data;
+    await consumeUsage({ tenantId, metric: 'leads_created', sourceKey: `lead:${randomUUID()}`, metadata: { source: data.source || 'manual' } });
     const lead = await prisma.salesLead.create({
       data: {
         id: randomUUID(),
@@ -805,6 +808,7 @@ export default async function salesAssistantRoutes(app) {
     }
 
     if (accepted.length) {
+      await consumeUsage({ tenantId, metric: 'leads_created', quantity: accepted.length, sourceKey: `lead-discovery:${randomUUID()}`, metadata: { source: 'web_discovery' } });
       await prisma.salesLead.createMany({
         data: accepted.map((candidate) => {
           const lead = {

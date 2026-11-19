@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../config/prisma.js';
+import { consumeUsage, assertAgentEntitlement } from '../billing/service.js';
 import { generateAIText } from '../ai/provider.js';
 
 const model = process.env.SALES_ASSISTANT_MODEL || undefined;
@@ -37,6 +38,8 @@ async function processOne(task) {
   if (task.agent_id) await prisma.workforceAgent.updateMany({ where: { id: task.agent_id, tenant_id: task.tenant_id }, data: { status: 'working' } });
   await prisma.workforceEvent.create({ data: { id: randomUUID(), tenant_id: task.tenant_id, agent_id: task.agent_id, task_id: task.id, event_type: 'task_execution_started', message: `${task.agent?.role || 'AI employee'} started: ${task.title}` } });
   try {
+    if (task.agent_id) await assertAgentEntitlement(task.tenant_id, task.agent_id);
+    await consumeUsage({ tenantId: task.tenant_id, metric: 'workforce_tasks', sourceKey: `workforce-task:${task.id}`, metadata: { task_id: task.id, agent_id: task.agent_id } });
     const output = await executeTask(task);
     await prisma.workforceTask.update({ where: { id: task.id }, data: { status: 'completed', output, completed_at: new Date(), error: null } });
     await prisma.workforceEvent.create({ data: { id: randomUUID(), tenant_id: task.tenant_id, agent_id: task.agent_id, task_id: task.id, event_type: 'task_execution_completed', message: `${task.agent.role} completed: ${task.title}`, metadata: { deliverables: Array.isArray(output.deliverables) ? output.deliverables.length : 0 } } });

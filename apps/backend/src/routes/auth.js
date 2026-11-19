@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import {z} from 'zod';
 import {prisma} from '../config/prisma.js';
 import { isPlatformAdmin } from '../security/adminMiddleware.js';
+import { ensureSubscription } from '../billing/service.js';
 const credentials=z.object({email:z.string().trim().email().max(254),password:z.string().min(8).max(128)});
 export default async function authRoutes(app){
  app.post('/register',async(req,reply)=>{
@@ -11,6 +12,7 @@ export default async function authRoutes(app){
   if(await prisma.user.findUnique({where:{email:normalized}}))return reply.code(409).send({error:'An account with this email already exists.'});
   const password_hash=await bcrypt.hash(password,12);
   const user=await prisma.user.create({data:{email:normalized,password_hash,name}});
+  await ensureSubscription(user.id, user.id);
   const token=app.jwt.sign({id:user.id,org_id:user.org_id,email:user.email},{sub:user.id,expiresIn:process.env.JWT_EXPIRES_IN||'7d'});
   return reply.code(201).send({success:true,token,user:{id:user.id,name:user.name,email:user.email,is_platform_admin:isPlatformAdmin(user.email)}});
  });

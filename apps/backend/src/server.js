@@ -14,6 +14,8 @@ import marketingRoutes from './routes/marketing.js';
 import publicMarketingRoutes from './routes/publicMarketing.js';
 import seoRoutes from './routes/seo.js';
 import socialRoutes from './routes/social.js';
+import billingRoutes from './routes/billing.js';
+import { assertSubscriptionAccess } from './billing/service.js';
 import { startSocialPublisher } from './worker/socialPublisher.js';
 import { startMorningSalesScheduler } from "./worker/morningCronScheduler.js";
 import { startWorkforceWorker } from './worker/workforceWorker.js';
@@ -26,8 +28,15 @@ if (process.env.JWT_SECRET.length < 32) { app.log.error('JWT_SECRET must contain
 await app.register(cors, { origin: (origin, cb) => { const allowed = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173,https://salesassistant.nexusthecore.com').split(',').map(x => x.trim()); if (!origin || allowed.includes('*') || allowed.includes(origin)) cb(null, true); else cb(new Error('Origin is not allowed by CORS'), false) }, credentials: true });
 await app.register(jwt, { secret: process.env.JWT_SECRET });
 await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
+// Preserve the exact request bytes for Stripe webhook signature verification.
+app.removeContentTypeParser('application/json');
+app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request, body, done) => {
+  request.rawBody = body;
+  try { done(null, JSON.parse(body.toString('utf8'))); } catch (error) { done(error); }
+});
 app.get('/health', async (request, reply) => { try { await prisma.$queryRaw`SELECT 1`; return { ok: true, service: 'sales-assistant-ai', database: 'connected' }; } catch (error) { request.log.error(error); return reply.code(503).send({ ok: false, service: 'sales-assistant-ai', database: 'unavailable' }); } });
 await app.register(authRoutes, { prefix: '/api/auth' });
+await app.register(billingRoutes, { prefix: '/api/billing' });
 await app.register(salesAssistantRoutes, { prefix: '/api/sales-assistant' });
 await app.register(workforceRoutes, { prefix: '/api/workforce' });
 await app.register(prospectingRoutes, { prefix: '/api/prospecting' });

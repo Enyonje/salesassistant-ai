@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../config/prisma.js';
 import { requireAuth } from '../security/authMiddleware.js';
 import { discoverMarketProspects } from '../agents/marketDiscovery.js';
+import { consumeUsage } from '../billing/service.js';
 
 const searchSchema = z.object({
   industry: z.string().trim().min(2).max(120), location: z.string().trim().max(120).optional(),
@@ -22,6 +23,7 @@ export default async function prospectingRoutes(app) {
     const parsed = searchSchema.safeParse(req.body || {});
     if (!parsed.success) return reply.code(400).send({ success: false, error: 'Provide an industry and valid discovery settings.' });
     try {
+      await consumeUsage({ tenantId: req.user.id, metric: 'prospecting_runs', sourceKey: `prospecting:${randomUUID()}`, metadata: { industry: parsed.data.industry } });
       const result = await discoverMarketProspects({ tenantId: req.user.id, userId: req.user.id,
         industry: parsed.data.industry, location: parsed.data.location, keywords: parsed.data.keywords,
         idealCustomer: parsed.data.ideal_customer, limit: parsed.data.limit });
@@ -48,6 +50,7 @@ export default async function prospectingRoutes(app) {
     const prospect = await prisma.marketProspect.findFirst({ where: { id: req.params.id, tenant_id: req.user.id } });
     if (!prospect) return reply.code(404).send({ success: false, error: 'Prospect not found.' });
     if (prospect.status === 'converted' && prospect.converted_lead_id) return { success: true, lead_id: prospect.converted_lead_id, message: 'Prospect already converted.' };
+    await consumeUsage({ tenantId: req.user.id, metric: 'leads_created', sourceKey: `prospect-convert:${prospect.id}`, metadata: { source: 'market_discovery_conversion' } });
     const lead = await prisma.salesLead.create({ data: {
       id: randomUUID(), tenant_id: req.user.id, owner_user_id: req.user.id,
       full_name: prospect.contact_name || 'Decision-maker not yet identified', company: prospect.company_name,
